@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Standard Console Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Async Appender to prevent logging from blocking Reactor Netty event loop threads -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="CONSOLE" />
+        <!-- Queue capacity -->
+        <queueSize>2048</queueSize>
+        <!-- Keep caller data (like line numbers) if needed, but false is faster and less blocking -->
+        <includeCallerData>false</includeCallerData>
+        <!-- Do not discard threshold (0 means we don't drop logs unless queue is full) -->
+        <discardingThreshold>0</discardingThreshold>
+        <!-- Critical for reactive: if true, appender discards messages when queue is full instead of blocking -->
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </root>
+
+    <!-- Custom log levels -->
+    <logger name="com.example.reactiveguide" level="DEBUG" />
+    <logger name="org.springframework.r2dbc" level="DEBUG" />
+</configuration>
