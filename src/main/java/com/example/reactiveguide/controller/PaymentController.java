@@ -1,54 +1,73 @@
 package com.example.reactiveguide.controller;
 
+import com.example.reactiveguide.api.PaymentsApi;
 import com.example.reactiveguide.domain.PaymentStatus;
 import com.example.reactiveguide.dto.PaymentRequest;
 import com.example.reactiveguide.dto.PaymentResponse;
 import com.example.reactiveguide.service.PaymentService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 
 @RestController
-@RequestMapping("/api/payments")
 @RequiredArgsConstructor
-public class PaymentController {
+public class PaymentController implements PaymentsApi {
 
     private final PaymentService paymentService;
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Mono<PaymentResponse> createPayment(@RequestBody PaymentRequest request) {
-        return paymentService.createPayment(request);
+    @Override
+    public Mono<ResponseEntity<PaymentResponse>> createPayment(
+            Mono<PaymentRequest> paymentRequest,
+            ServerWebExchange exchange) {
+        return paymentRequest
+                .flatMap(paymentService::createPayment)
+                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
     }
 
-    @PutMapping("/{id}")
-    public Mono<PaymentResponse> updatePayment(@PathVariable Long id, @RequestBody PaymentRequest request) {
-        return paymentService.updatePayment(id, request);
+    @Override
+    public Mono<ResponseEntity<PaymentResponse>> updatePayment(
+            Long id,
+            Mono<PaymentRequest> paymentRequest,
+            ServerWebExchange exchange) {
+        return paymentRequest
+                .flatMap(request -> paymentService.updatePayment(id, request))
+                .map(ResponseEntity::ok);
     }
 
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> deletePayment(@PathVariable Long id) {
-        return paymentService.deletePayment(id);
+    @Override
+    public Mono<ResponseEntity<Void>> deletePayment(
+            Long id,
+            ServerWebExchange exchange) {
+        return paymentService.deletePayment(id)
+                .then(Mono.just(ResponseEntity.noContent().build()));
     }
 
-    @GetMapping("/{id}")
-    public Mono<PaymentResponse> getPaymentById(@PathVariable Long id) {
-        return paymentService.getPaymentById(id);
+    @Override
+    public Mono<ResponseEntity<PaymentResponse>> getPaymentById(
+            Long id,
+            ServerWebExchange exchange) {
+        return paymentService.getPaymentById(id)
+                .map(ResponseEntity::ok);
     }
 
-    @GetMapping
-    public Flux<PaymentResponse> findPayments(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
-            @RequestParam(required = false) BigDecimal amount,
-            @RequestParam(required = false) PaymentStatus status) {
-        return paymentService.findPayments(startDate, endDate, amount, status);
+    @Override
+    public Mono<ResponseEntity<Flux<PaymentResponse>>> findPayments(
+            OffsetDateTime startDate,
+            OffsetDateTime endDate,
+            BigDecimal amount,
+            PaymentStatus status,
+            ServerWebExchange exchange) {
+        Instant start = startDate != null ? startDate.toInstant() : null;
+        Instant end = endDate != null ? endDate.toInstant() : null;
+        Flux<PaymentResponse> payments = paymentService.findPayments(start, end, amount, status);
+        return Mono.just(ResponseEntity.ok(payments));
     }
 }

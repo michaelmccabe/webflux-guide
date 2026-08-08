@@ -35,12 +35,12 @@ public class PaymentService {
         log.info("Creating new payment: {}", request);
         Payment payment = paymentMapper.toEntity(request);
         Instant now = Instant.now();
-        payment.setCreatedAt(now);
-        payment.setUpdatedAt(now);
-        if (payment.getPaymentDate() == null) {
-            payment.setPaymentDate(now);
-        }
-        return paymentRepository.save(payment)
+        Payment updatedPayment = payment.toBuilder()
+                .createdAt(now)
+                .updatedAt(now)
+                .paymentDate(payment.paymentDate() != null ? payment.paymentDate() : now)
+                .build();
+        return paymentRepository.save(updatedPayment)
                 .map(paymentMapper::toResponse)
                 .doOnSuccess(saved -> log.info("Created payment successfully with ID: {}", saved.getId()));
     }
@@ -50,9 +50,14 @@ public class PaymentService {
         return paymentRepository.findById(id)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found with ID: " + id)))
                 .flatMap(existingPayment -> {
-                    paymentMapper.updateEntityFromRequest(request, existingPayment);
-                    existingPayment.setUpdatedAt(Instant.now());
-                    return paymentRepository.save(existingPayment);
+                    Payment updatedPayment = existingPayment.toBuilder()
+                            .amount(request.getAmount())
+                            .currency(request.getCurrency())
+                            .status(request.getStatus())
+                            .paymentDate(request.getPaymentDate() != null ? request.getPaymentDate() : existingPayment.paymentDate())
+                            .updatedAt(Instant.now())
+                            .build();
+                    return paymentRepository.save(updatedPayment);
                 })
                 .map(paymentMapper::toResponse)
                 .doOnSuccess(updated -> log.info("Updated payment ID: {} successfully", id));

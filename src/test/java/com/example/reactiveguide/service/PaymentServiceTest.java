@@ -142,7 +142,7 @@ class PaymentServiceTest {
                 .amount(new BigDecimal("200.00"))
                 .currency("USD")
                 .status(PaymentStatus.COMPLETED)
-                .createdAt(existing.getCreatedAt())
+                .createdAt(existing.createdAt())
                 .updatedAt(Instant.now())
                 .build();
 
@@ -180,7 +180,7 @@ class PaymentServiceTest {
     @Test
     void testDeletePayment_Success() {
         Long id = 1L;
-        Payment existing = new Payment();
+        Payment existing = Payment.builder().build();
 
         when(paymentRepository.findById(id)).thenReturn(Mono.just(existing));
         when(paymentRepository.delete(existing)).thenReturn(Mono.empty());

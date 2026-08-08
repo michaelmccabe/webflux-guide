@@ -8,11 +8,13 @@ This project is a high-performance, reactive Web API built with Spring Boot, Web
 - **Data Access**: Spring Data R2DBC
 - **Database**: PostgreSQL (reactive driver)
 - **Mapping**: MapStruct
-- **Code Generation**: Lombok
+- **Code Generation**: Lombok, MapStruct (via annotation processors)
+- **API Documentation**: OpenAPI 3 / Swagger (Springdoc WebFlux)
 - **Testing**: JUnit 5, Testcontainers, WebTestClient
 
 ## Features
 - **Non-blocking Pipelines**: Fully reactive request handling from the controller down to the database using Project Reactor (`Mono` / `Flux`).
+- **Non-blocking Logging**: Uses Logback's `AsyncAppender` with a `neverBlock` strategy to ensure console logging never blocks the reactive Netty event loop threads.
 - **Dynamic Search Filtering**: Query payments using combined query parameters (date range, amount, payment status).
 - **Health Check Endpoint**: `/health` API for Kubernetes liveness/readiness probes.
 - **Isolated Testing**: Integration tests run against a real PostgreSQL instance started in a Docker container via Testcontainers.
@@ -26,15 +28,16 @@ reactive-guide/
 ├── pom.xml                                   # Maven configuration
 ├── README.md                                 # Application documentation
 ├── deployment_guide.md                        # Kubernetes & GCP Cloud Deployment Guide
-├── guide-to-Payment.md                       # Guide for Payment Entity
-├── guide-to-PaymentStatus.md                 # Guide for PaymentStatus Enum
-├── guide-to-PaymentRepository.md             # Guide for PaymentRepository Interface
-├── guide-to-PaymentRequest.md                # Guide for PaymentRequest DTO
-├── guide-to-PaymentResponse.md               # Guide for PaymentResponse DTO
-├── guide-to-PaymentMapper.md                 # Guide for PaymentMapper interface
-├── guide-to-PaymentService.md                # Guide for PaymentService class
-├── guide-to-PaymentController.md             # Guide for PaymentController REST Controller
-├── guide-to-debugging-reactive-code.md       # Guide for debugging reactive streams and pipelines
+├── guides/                                    # Detailed developer guides
+│   ├── guide-to-Payment.md                    # Guide for Payment Entity
+│   ├── guide-to-PaymentStatus.md              # Guide for PaymentStatus Enum
+│   ├── guide-to-PaymentRepository.md          # Guide for PaymentRepository Interface
+│   ├── guide-to-PaymentRequest.md             # Guide for PaymentRequest DTO
+│   ├── guide-to-PaymentResponse.md            # Guide for PaymentResponse DTO
+│   ├── guide-to-PaymentMapper.md              # Guide for PaymentMapper interface
+│   ├── guide-to-PaymentService.md             # Guide for PaymentService class
+│   ├── guide-to-PaymentController.md          # Guide for PaymentController REST Controller
+│   └── guide-to-debugging-reactive-code.md    # Guide for debugging reactive streams and pipelines
 └── src/
 
     ├── main/
@@ -59,7 +62,13 @@ reactive-guide/
 
 ## REST Endpoints
 
-### 1. Actuator Endpoints
+### 1. Interactive API Documentation (OpenAPI / Swagger)
+- **Swagger UI**: **`GET /swagger-ui.html`**
+  - Interactive browser UI to explore, test, and execute API calls directly.
+- **OpenAPI Spec**: **`GET /v3/api-docs`**
+  - Machine-readable JSON specification of all endpoints, parameters, and models.
+
+### 2. Actuator Endpoints
 - **`GET /health`**
   - Returns Spring Boot Actuator health status (e.g. `{"status": "UP"}`) with `200 OK`.
 - **`GET /prometheus`**
@@ -84,6 +93,16 @@ reactive-guide/
     - `endDate`: ISO-8601 string (e.g. `2026-08-07T23:59:59Z`)
     - `amount`: Number (e.g. `150.00`)
     - `status`: One of `PENDING`, `COMPLETED`, `FAILED`, `CANCELLED`
+
+---
+
+## Non-blocking Logging
+
+To ensure the high performance of our reactive streams, logging is designed to be non-blocking. This is achieved using Logback's `AsyncAppender` in [logback-spring.xml](file:///Users/michaelmccabe/local-code/java/reactive-guide/src/main/resources/logback-spring.xml):
+
+* **Asynchronous Queueing**: Log events are buffered into an in-memory queue (capacity `2048`) and processed on a background thread.
+* **No-block Policy (`neverBlock = true`)**: If the queue fills up under heavy load, log messages are discarded rather than blocking the critical reactive Netty event loop threads.
+* **No Caller Data Retrieval**: Stack trace generation (needed for method name and line number logs) is a blocking operation and is disabled (`includeCallerData = false`) to maximize throughput.
 
 ---
 
