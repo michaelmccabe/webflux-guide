@@ -5,7 +5,7 @@ import com.example.reactiveguide.domain.PaymentStatus;
 import com.example.reactiveguide.dto.PaymentRequest;
 import com.example.reactiveguide.dto.PaymentResponse;
 import com.example.reactiveguide.mapper.PaymentMapper;
-import com.example.reactiveguide.mapper.PaymentMapperImpl;
+import org.mapstruct.factory.Mappers;
 import com.example.reactiveguide.repository.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class PaymentServiceTest {
     @BeforeEach
     void setUp() {
         // Instantiate real MapStruct implementation to cover mapping code
-        paymentMapper = new PaymentMapperImpl();
+        paymentMapper = Mappers.getMapper(PaymentMapper.class);
         paymentService = new PaymentService(paymentRepository, paymentMapper, entityTemplate);
     }
 
