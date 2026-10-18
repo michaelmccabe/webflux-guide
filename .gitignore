@@ -8,7 +8,9 @@ target/
 .settings
 .springBeans
 .sts4-cache
-## IntelliJ IDEA ##
+## IDE masking ##
+/bin/
+.vscode/
 .idea/
 *.iws
 *.iml

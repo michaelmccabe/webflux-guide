@@ -1,0 +1,173 @@
+# Payment Service Full End-to-End Workflow Test
+metadata:
+  name: "Payment Service Full Workflow Test"
+  author: "michaelmccabe"
+  description: "End-to-end integration test demonstrating payment creation, status transitions, filtering, metrics, and deletion"
+
+config:
+  base_url: "http://127.0.0.1:8080"
+
+workflow:
+  - step: "health-check"
+    description: "Verify the payment service is up and healthy"
+    request:
+      method: "GET"
+      url: "${base_url}/health"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "status"
+          value: "UP"
+    output:
+      print: "Payment Service is healthy"
+
+  - step: "initiate-primary-payment"
+    description: "Create a PENDING payment"
+    request:
+      method: "POST"
+      url: "${base_url}/api/payments"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 512.45
+        currency: "USD"
+        status: "PENDING"
+        paymentDate: "2026-10-18T12:00:00Z"
+    expect:
+      status: 201
+      json_path_match:
+        - path: "amount"
+          value: 512.45
+        - path: "currency"
+          value: "USD"
+        - path: "status"
+          value: "PENDING"
+    capture:
+      - json_path: "id"
+        as: "primary_payment_id"
+    output:
+      print: "Initiated primary payment with ID: ${primary_payment_id}"
+
+  - step: "initiate-secondary-payment"
+    description: "Create a second PENDING payment to be cancelled"
+    request:
+      method: "POST"
+      url: "${base_url}/api/payments"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 88.25
+        currency: "EUR"
+        status: "PENDING"
+        paymentDate: "2026-10-18T12:05:00Z"
+    expect:
+      status: 201
+      json_path_match:
+        - path: "amount"
+          value: 88.25
+        - path: "currency"
+          value: "EUR"
+        - path: "status"
+          value: "PENDING"
+    capture:
+      - json_path: "id"
+        as: "secondary_payment_id"
+    output:
+      print: "Initiated secondary payment with ID: ${secondary_payment_id}"
+
+  - step: "complete-primary-payment"
+    description: "Transition primary payment from PENDING to COMPLETED"
+    request:
+      method: "PUT"
+      url: "${base_url}/api/payments/${primary_payment_id}"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 512.45
+        currency: "USD"
+        status: "COMPLETED"
+        paymentDate: "2026-10-18T12:00:00Z"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "id"
+          value: ${primary_payment_id}
+        - path: "status"
+          value: "COMPLETED"
+    output:
+      print: "Primary payment ${primary_payment_id} marked COMPLETED"
+
+  - step: "cancel-secondary-payment"
+    description: "Transition secondary payment from PENDING to CANCELLED"
+    request:
+      method: "PUT"
+      url: "${base_url}/api/payments/${secondary_payment_id}"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 88.25
+        currency: "EUR"
+        status: "CANCELLED"
+        paymentDate: "2026-10-18T12:05:00Z"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "id"
+          value: ${secondary_payment_id}
+        - path: "status"
+          value: "CANCELLED"
+    output:
+      print: "Secondary payment ${secondary_payment_id} marked CANCELLED"
+
+  - step: "verify-completed-payment-via-filter"
+    description: "Verify primary payment is returned when filtering by COMPLETED status and amount"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments?status=COMPLETED&amount=512.45"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "[0].id"
+          value: ${primary_payment_id}
+        - path: "[0].status"
+          value: "COMPLETED"
+    output:
+      print: "Verified primary payment via search filter"
+
+  - step: "delete-cancelled-payment"
+    description: "Remove the cancelled secondary payment"
+    request:
+      method: "DELETE"
+      url: "${base_url}/api/payments/${secondary_payment_id}"
+    expect:
+      status: 204
+    output:
+      print: "Deleted cancelled payment ${secondary_payment_id}"
+
+  - step: "verify-cancelled-payment-deleted"
+    description: "Verify deleted secondary payment returns 404"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments/${secondary_payment_id}"
+    expect:
+      status: 404
+    output:
+      print: "Confirmed deleted payment ${secondary_payment_id} returns 404"
+
+  - step: "cleanup-primary-payment"
+    description: "Clean up primary payment"
+    request:
+      method: "DELETE"
+      url: "${base_url}/api/payments/${primary_payment_id}"
+    expect:
+      status: 204
+    output:
+      print: "Cleaned up primary payment ${primary_payment_id}"
