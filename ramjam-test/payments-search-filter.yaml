@@ -1,0 +1,134 @@
+# Payments dynamic search and filtering workflow
+metadata:
+  name: "Payments Search and Filter Workflow"
+  author: "michaelmccabe"
+  description: "Test dynamic filtering by status, exact amount, and date range"
+
+config:
+  base_url: "http://127.0.0.1:8080"
+
+workflow:
+  - step: "create-completed-payment"
+    description: "Create a COMPLETED payment for filter testing"
+    request:
+      method: "POST"
+      url: "${base_url}/api/payments"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 345.67
+        currency: "GBP"
+        status: "COMPLETED"
+        paymentDate: "2026-09-15T14:30:00Z"
+    expect:
+      status: 201
+      json_path_match:
+        - path: "status"
+          value: "COMPLETED"
+        - path: "amount"
+          value: 345.67
+    capture:
+      - json_path: "id"
+        as: "completed_payment_id"
+    output:
+      print: "Created COMPLETED payment with ID: ${completed_payment_id}"
+
+  - step: "create-failed-payment"
+    description: "Create a FAILED payment for filter testing"
+    request:
+      method: "POST"
+      url: "${base_url}/api/payments"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 99.99
+        currency: "USD"
+        status: "FAILED"
+        paymentDate: "2026-09-16T09:15:00Z"
+    expect:
+      status: 201
+      json_path_match:
+        - path: "status"
+          value: "FAILED"
+        - path: "amount"
+          value: 99.99
+    capture:
+      - json_path: "id"
+        as: "failed_payment_id"
+    output:
+      print: "Created FAILED payment with ID: ${failed_payment_id}"
+
+  - step: "filter-by-exact-amount"
+    description: "Filter payments by exact amount 345.67"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments?amount=345.67"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "[0].id"
+          value: ${completed_payment_id}
+        - path: "[0].amount"
+          value: 345.67
+        - path: "[0].status"
+          value: "COMPLETED"
+    output:
+      print: "Verified exact amount filter returned payment ${completed_payment_id}"
+
+  - step: "filter-by-status-and-amount"
+    description: "Filter payments by status FAILED and amount 99.99"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments?status=FAILED&amount=99.99"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "[0].id"
+          value: ${failed_payment_id}
+        - path: "[0].status"
+          value: "FAILED"
+    output:
+      print: "Verified status and amount filter returned payment ${failed_payment_id}"
+
+  - step: "filter-by-date-range"
+    description: "Filter payments by date range and amount"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments?startDate=2026-09-15T00:00:00Z&endDate=2026-09-15T23:59:59Z&amount=345.67"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "[0].id"
+          value: ${completed_payment_id}
+        - path: "[0].currency"
+          value: "GBP"
+    output:
+      print: "Verified date range filter returned payment ${completed_payment_id}"
+
+  - step: "cleanup-completed-payment"
+    description: "Delete COMPLETED test payment"
+    request:
+      method: "DELETE"
+      url: "${base_url}/api/payments/${completed_payment_id}"
+    expect:
+      status: 204
+    output:
+      print: "Deleted payment ${completed_payment_id}"
+
+  - step: "cleanup-failed-payment"
+    description: "Delete FAILED test payment"
+    request:
+      method: "DELETE"
+      url: "${base_url}/api/payments/${failed_payment_id}"
+    expect:
+      status: 204
+    output:
+      print: "Deleted payment ${failed_payment_id}"

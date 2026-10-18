@@ -1,0 +1,48 @@
+# Payment 404 Not Found validation workflow
+metadata:
+  name: "Payment Not Found Validation"
+  author: "michaelmccabe"
+  description: "Verify that getting, updating, or deleting a non-existent payment returns 404 Not Found"
+
+config:
+  base_url: "http://127.0.0.1:8080"
+
+workflow:
+  - step: "get-non-existent-payment"
+    description: "Attempt to retrieve a non-existent payment ID"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments/999999"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 404
+    output:
+      print: "Correctly returned 404 Not Found when fetching non-existent payment"
+
+  - step: "update-non-existent-payment"
+    description: "Attempt to update a non-existent payment ID"
+    request:
+      method: "PUT"
+      url: "${base_url}/api/payments/999999"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 100.00
+        currency: "USD"
+        status: "COMPLETED"
+    expect:
+      status: 404
+    output:
+      print: "Correctly returned 404 Not Found when updating non-existent payment"
+
+  - step: "delete-non-existent-payment"
+    description: "Attempt to delete a non-existent payment ID"
+    request:
+      method: "DELETE"
+      url: "${base_url}/api/payments/999999"
+    expect:
+      status: 404
+    output:
+      print: "Correctly returned 404 Not Found when deleting non-existent payment"

@@ -1,0 +1,117 @@
+# Payments CRUD lifecycle workflow
+metadata:
+  name: "Payments CRUD Workflow"
+  author: "michaelmccabe"
+  description: "Test full CRUD operations on payments"
+
+config:
+  base_url: "http://127.0.0.1:8080"
+
+workflow:
+  - step: "create-payment"
+    description: "Create a new payment record"
+    request:
+      method: "POST"
+      url: "${base_url}/api/payments"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 150.25
+        currency: "USD"
+        status: "PENDING"
+        paymentDate: "2026-08-08T10:00:00Z"
+    expect:
+      status: 201
+      json_path_match:
+        - path: "amount"
+          value: 150.25
+        - path: "currency"
+          value: "USD"
+        - path: "status"
+          value: "PENDING"
+    capture:
+      - json_path: "id"
+        as: "payment_id"
+    output:
+      print: "Created payment with ID: ${payment_id}"
+
+  - step: "get-payment-by-id"
+    description: "Fetch the created payment by ID"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments/${payment_id}"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "id"
+          value: ${payment_id}
+        - path: "amount"
+          value: 150.25
+        - path: "currency"
+          value: "USD"
+        - path: "status"
+          value: "PENDING"
+    output:
+      print: "Successfully retrieved payment ${payment_id}"
+
+  - step: "get-all-payments"
+    description: "Fetch list of all payments"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments"
+      headers:
+        Accept: "application/json"
+    expect:
+      status: 200
+    output:
+      print: "Successfully listed all payments"
+
+  - step: "update-payment"
+    description: "Update the payment amount and status to COMPLETED"
+    request:
+      method: "PUT"
+      url: "${base_url}/api/payments/${payment_id}"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body:
+        amount: 200.55
+        currency: "USD"
+        status: "COMPLETED"
+        paymentDate: "2026-08-08T10:00:00Z"
+    expect:
+      status: 200
+      json_path_match:
+        - path: "id"
+          value: ${payment_id}
+        - path: "amount"
+          value: 200.55
+        - path: "currency"
+          value: "USD"
+        - path: "status"
+          value: "COMPLETED"
+    output:
+      print: "Successfully updated payment ${payment_id} to COMPLETED"
+
+  - step: "delete-payment"
+    description: "Delete the created payment"
+    request:
+      method: "DELETE"
+      url: "${base_url}/api/payments/${payment_id}"
+    expect:
+      status: 204
+    output:
+      print: "Successfully deleted payment ${payment_id}"
+
+  - step: "verify-payment-deleted"
+    description: "Ensure deleted payment returns 404"
+    request:
+      method: "GET"
+      url: "${base_url}/api/payments/${payment_id}"
+    expect:
+      status: 404
+    output:
+      print: "Confirmed payment ${payment_id} is no longer present"

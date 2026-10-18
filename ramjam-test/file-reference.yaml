@@ -1,0 +1,43 @@
+# External body file test
+metadata:
+  name: "Body File Reference Test"
+  author: "michaelmccabe"
+  description: "Test creating a payment using an external JSON body file"
+
+config:
+  base_url: "http://127.0.0.1:8080"
+
+workflow:
+  - step: "create-payment-from-file"
+    description: "Create a payment with payload from external file"
+    request:
+      method: "POST"
+      url: "${base_url}/api/payments"
+      headers:
+        Content-Type: "application/json"
+        Accept: "application/json"
+      body_file: "payloads/create-payment.json"
+    expect:
+      status: 201
+      json_path_match:
+        - path: "amount"
+          value: 250.75
+        - path: "currency"
+          value: "EUR"
+        - path: "status"
+          value: "PENDING"
+    capture:
+      - json_path: "id"
+        as: "ext_payment_id"
+    output:
+      print: "Created payment from file with ID: ${ext_payment_id}"
+
+  - step: "clean-up-payment"
+    description: "Delete the created payment"
+    request:
+      method: "DELETE"
+      url: "${base_url}/api/payments/${ext_payment_id}"
+    expect:
+      status: 204
+    output:
+      print: "Cleaned up external payload payment"
