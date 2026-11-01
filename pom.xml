@@ -24,7 +24,7 @@
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <testcontainers.version>1.21.4</testcontainers.version>
         <springdoc.version>2.8.17</springdoc.version>
-        <jacoco.version>0.8.15</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <openapi-generator.version>7.26.0</openapi-generator.version>
     </properties>
 
