@@ -25,7 +25,7 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <springdoc.version>2.8.17</springdoc.version>
         <jacoco.version>0.8.15</jacoco.version>
-        <openapi-generator.version>7.26.0</openapi-generator.version>
+        <openapi-generator.version>7.27.0</openapi-generator.version>
     </properties>
 
 
